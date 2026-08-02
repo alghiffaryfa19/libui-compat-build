@@ -9,6 +9,9 @@ LUNCH_TARGET="${LUNCH_TARGET:-aosp_arm64-userdebug}"
 JOBS="${JOBS:-$(nproc)}"
 AOSP_DIR="${AOSP_DIR:-${RUNNER_TEMP:-$PWD/.work}/aosp}"
 DIST_DIR="${DIST_DIR:-$PWD/dist}"
+MIN_FREE_GIB="${MIN_FREE_GIB:-180}"
+REPO_SYNC_TIMEOUT="${REPO_SYNC_TIMEOUT:-90m}"
+BUILD_TIMEOUT="${BUILD_TIMEOUT:-240m}"
 
 print_config() {
     printf '%s\n' \
@@ -19,7 +22,10 @@ print_config() {
         "LUNCH_TARGET=$LUNCH_TARGET" \
         "JOBS=$JOBS" \
         "AOSP_DIR=$AOSP_DIR" \
-        "DIST_DIR=$DIST_DIR"
+        "DIST_DIR=$DIST_DIR" \
+        "MIN_FREE_GIB=$MIN_FREE_GIB" \
+        "REPO_SYNC_TIMEOUT=$REPO_SYNC_TIMEOUT" \
+        "BUILD_TIMEOUT=$BUILD_TIMEOUT"
 }
 
 if [[ "${1:-}" == "--print-config" ]]; then
@@ -37,7 +43,12 @@ if [[ ! "$JOBS" =~ ^[1-9][0-9]*$ ]]; then
     exit 2
 fi
 
-for command in file git nm readelf repo sha256sum; do
+if [[ ! "$MIN_FREE_GIB" =~ ^[1-9][0-9]*$ ]]; then
+    printf 'MIN_FREE_GIB must be a positive integer, got: %s\n' "$MIN_FREE_GIB" >&2
+    exit 2
+fi
+
+for command in df file git nm readelf repo sha256sum timeout; do
     if ! command -v "$command" >/dev/null 2>&1; then
         printf 'required command not found: %s\n' "$command" >&2
         exit 1
@@ -50,6 +61,22 @@ exec > >(tee "$DIST_DIR/build.log") 2>&1
 printf 'Build configuration:\n'
 print_config
 
+available_kib="$(df --output=avail -k "$AOSP_DIR" | {
+    read -r
+    read -r value
+    printf '%s\n' "$value"
+})"
+required_kib=$((MIN_FREE_GIB * 1024 * 1024))
+if (( available_kib < required_kib )); then
+    printf 'not enough free space for AOSP build: %s KiB available, %s GiB required\n' \
+        "$available_kib" "$MIN_FREE_GIB" >&2
+    df -h "$AOSP_DIR" >&2
+    exit 1
+fi
+printf 'Free-space preflight passed:\n'
+df -h "$AOSP_DIR"
+
+printf '\n=== repo init ===\n'
 (
     cd "$AOSP_DIR"
     repo init \
@@ -60,25 +87,29 @@ print_config
         --clone-filter=blob:limit=10M \
         --no-use-superproject
 
-    repo sync \
-        --current-branch \
-        --detach \
-        --force-sync \
-        --no-clone-bundle \
-        --no-tags \
-        --optimized-fetch \
-        --prune \
-        --fail-fast \
-        --retry-fetches=3 \
-        --jobs="$JOBS"
+    printf '\n=== repo sync (timeout %s) ===\n' "$REPO_SYNC_TIMEOUT"
+    timeout --foreground --signal=TERM --kill-after=60s "$REPO_SYNC_TIMEOUT" \
+        repo sync \
+            --current-branch \
+            --detach \
+            --force-sync \
+            --no-clone-bundle \
+            --no-tags \
+            --optimized-fetch \
+            --prune \
+            --fail-fast \
+            --retry-fetches=3 \
+            --jobs="$JOBS"
 )
 
 libhybris_dir="$AOSP_DIR/libhybris"
 if [[ ! -d "$libhybris_dir/.git" ]]; then
+    printf '\n=== initialize libhybris checkout ===\n'
     git init "$libhybris_dir"
     git -C "$libhybris_dir" remote add origin "$LIBHYBRIS_REPOSITORY"
 fi
 
+printf '\n=== checkout libhybris ===\n'
 git -C "$libhybris_dir" fetch --depth=1 origin "$LIBHYBRIS_REF"
 git -C "$libhybris_dir" checkout --detach FETCH_HEAD
 libhybris_commit="$(git -C "$libhybris_dir" rev-parse HEAD)"
@@ -86,12 +117,21 @@ libhybris_commit="$(git -C "$libhybris_dir" rev-parse HEAD)"
 product_out_file="$DIST_DIR/android-product-out.txt"
 (
     cd "$AOSP_DIR"
+    printf '\n=== initialize Android build environment ===\n'
     set +u
     source build/envsetup.sh
     set -u
     lunch "$LUNCH_TARGET"
     printf '%s\n' "$ANDROID_PRODUCT_OUT" >"$product_out_file"
-    m -j"$JOBS" libui_compat_layer
+    printf '\n=== build libui_compat_layer (timeout %s) ===\n' "$BUILD_TIMEOUT"
+    timeout --foreground --signal=TERM --kill-after=60s "$BUILD_TIMEOUT" \
+        bash -c '
+            set +u
+            source build/envsetup.sh
+            set -u
+            lunch "$1"
+            m -j"$2" libui_compat_layer
+        ' _ "$LUNCH_TARGET" "$JOBS"
     repo manifest -r -o "$DIST_DIR/aosp-manifest.xml"
 )
 

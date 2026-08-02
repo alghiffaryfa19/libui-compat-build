@@ -44,6 +44,7 @@ assert "actions/upload-artifact@v4" in uses
 assert any("scripts/build.sh" in command for command in runs)
 assert any("df -h" in command for command in runs)
 assert any("/usr/local/lib/android" in command for command in runs)
+assert any("MIN_FREE_GIB" in command for command in runs)
 PY
 
 python3 - "$root_dir/scripts/build.sh" <<'PY'
@@ -55,4 +56,8 @@ with open(sys.argv[1], encoding="utf-8") as stream:
 assert "--network-only" not in script
 for option in ("--current-branch", "--force-sync", "--optimized-fetch"):
     assert script.count(option) == 1, f"duplicate repo option: {option}"
+assert "REPO_SYNC_TIMEOUT" in script
+assert "BUILD_TIMEOUT" in script
+assert "MIN_FREE_GIB" in script
+assert "timeout --foreground" in script
 PY

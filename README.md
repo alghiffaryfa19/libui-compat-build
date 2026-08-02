@@ -23,7 +23,13 @@ Defaults:
 
 Use a larger or self-hosted runner with roughly 200 GiB of free disk and at
 least 32 GiB RAM. A standard GitHub-hosted runner is likely to run out of disk
-while synchronizing AOSP.
+while synchronizing AOSP. The script checks for 180 GiB before starting the
+checkout and stops with a clear error when the runner is too small.
+
+The workflow also limits AOSP synchronization to 90 minutes and compilation to
+240 minutes. Override `MIN_FREE_GIB`, `REPO_SYNC_TIMEOUT`, or
+`BUILD_TIMEOUT` in a self-hosted workflow copy when the runner has different
+capacity or performance characteristics.
 
 The artifact contains the library, its checksum, ELF diagnostics, build log,
 resolved AOSP manifest, and libhybris commit metadata.

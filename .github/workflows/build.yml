@@ -36,6 +36,9 @@ jobs:
       LIBHYBRIS_REF: ${{ inputs.libhybris_ref }}
       LUNCH_TARGET: ${{ inputs.lunch_target }}
       DIST_DIR: ${{ github.workspace }}/dist
+      MIN_FREE_GIB: 180
+      REPO_SYNC_TIMEOUT: 90m
+      BUILD_TIMEOUT: 240m
 
     steps:
       - uses: actions/checkout@v4
@@ -66,7 +69,10 @@ jobs:
         run: bash tests/test-repo.sh
 
       - name: Build libui_compat_layer.so
-        run: scripts/build.sh
+        run: |
+          printf 'MIN_FREE_GIB=%s REPO_SYNC_TIMEOUT=%s BUILD_TIMEOUT=%s\n' \
+            "$MIN_FREE_GIB" "$REPO_SYNC_TIMEOUT" "$BUILD_TIMEOUT"
+          scripts/build.sh
 
       - name: Upload build output
         if: always()
