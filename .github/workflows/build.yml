@@ -1,0 +1,65 @@
+name: Build libui compatibility layer
+
+on:
+  workflow_dispatch:
+    inputs:
+      aosp_ref:
+        description: Android platform manifest ref
+        required: true
+        default: android-15.0.0_r3
+      libhybris_ref:
+        description: Linux-on-droid/libhybris branch, tag, or commit
+        required: true
+        default: lindroid-21
+      lunch_target:
+        description: Android lunch target
+        required: true
+        default: aosp_arm64-userdebug
+      runner:
+        description: Runner label; use a larger or self-hosted runner when possible
+        required: true
+        default: ubuntu-24.04
+
+permissions:
+  contents: read
+
+concurrency:
+  group: libui-compat-${{ inputs.aosp_ref }}-${{ inputs.libhybris_ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 360
+    env:
+      AOSP_REF: ${{ inputs.aosp_ref }}
+      LIBHYBRIS_REF: ${{ inputs.libhybris_ref }}
+      LUNCH_TARGET: ${{ inputs.lunch_target }}
+      DIST_DIR: ${{ github.workspace }}/dist
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install host dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            bc bison build-essential ccache flex g++-multilib gcc-multilib \
+            git git-lfs libelf-dev liblz4-tool libssl-dev libxml2-utils \
+            lz4 lzop pngcrush python3-yaml repo rsync squashfs-tools \
+            xsltproc zip zlib1g-dev
+
+      - name: Validate repository
+        run: bash tests/test-repo.sh
+
+      - name: Build libui_compat_layer.so
+        run: scripts/build.sh
+
+      - name: Upload build output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: libui-compat-${{ github.run_id }}
+          path: dist/
+          if-no-files-found: warn
+          retention-days: 14
