@@ -42,6 +42,8 @@ runs = [step.get("run", "") for step in build["steps"]]
 assert "actions/checkout@v4" in uses
 assert "actions/upload-artifact@v4" in uses
 assert any("scripts/build.sh" in command for command in runs)
+assert any("df -h" in command for command in runs)
+assert any("/usr/local/lib/android" in command for command in runs)
 PY
 
 python3 - "$root_dir/scripts/build.sh" <<'PY'
