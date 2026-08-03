@@ -99,7 +99,7 @@ required = {
     "system/tools/aidl",
     "prebuilts/clang/host/linux-x86",
     "prebuilts/build-tools",
-    "prebuilts/jdk/jdk17/linux-x86",
+    "prebuilts/jdk/jdk17",
 }
 assert required <= projects, sorted(required - projects)
 PY

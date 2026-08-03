@@ -17,7 +17,7 @@ prebuilts/asuite
 prebuilts/build-tools
 prebuilts/clang/host/linux-x86
 prebuilts/go/linux-x86
-prebuilts/jdk/jdk17/linux-x86
+prebuilts/jdk/jdk17
 prebuilts/misc
 prebuilts/rust
 system/core
