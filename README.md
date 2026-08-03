@@ -21,7 +21,7 @@ Defaults:
 
 - Android API: `35` -> AOSP `android-15.0.0_r3`
 - libhybris: `Linux-on-droid/libhybris`, branch `lindroid-21`
-- target: `aosp_arm64-userdebug`
+- target: `aosp_arm64-trunk_staging-userdebug`
 
 The minimal project set is intended to fit on a standard runner, but use at
 least 55 GiB of free disk and 16 GiB RAM. A larger or self-hosted runner is

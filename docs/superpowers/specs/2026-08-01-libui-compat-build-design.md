@@ -34,7 +34,7 @@ The workflow exposes manual inputs with these defaults:
 
 - AOSP manifest: `https://android.googlesource.com/platform/manifest`
 - Android API: `35`, mapped to AOSP ref `android-15.0.0_r3`
-- Lunch target: `aosp_arm64-userdebug`
+- Lunch target: `aosp_arm64-trunk_staging-userdebug`
 - libhybris repository: `https://github.com/Linux-on-droid/libhybris.git`
 - libhybris ref: `lindroid-21`
 - Runner label: configurable, with `ubuntu-24.04` as the portable default

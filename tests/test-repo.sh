@@ -14,14 +14,14 @@ config="$({
     ANDROID_API=35 \
     AOSP_REF=android-test \
     LIBHYBRIS_REF=hybris-test \
-    LUNCH_TARGET=test_arm64-userdebug \
+    LUNCH_TARGET=test_arm64-trunk_staging-userdebug \
         "$root_dir/scripts/build.sh" --print-config
 })"
 
 [[ "$config" == *"ANDROID_API=35"* ]]
 [[ "$config" == *"AOSP_REF=android-test"* ]]
 [[ "$config" == *"LIBHYBRIS_REF=hybris-test"* ]]
-[[ "$config" == *"LUNCH_TARGET=test_arm64-userdebug"* ]]
+[[ "$config" == *"LUNCH_TARGET=test_arm64-trunk_staging-userdebug"* ]]
 
 if ANDROID_API=34 "$root_dir/scripts/build.sh" --print-config >/dev/null 2>&1; then
     exit 1
@@ -38,7 +38,7 @@ dispatch = workflow["on"]["workflow_dispatch"]
 inputs = dispatch["inputs"]
 assert inputs["android_api"]["default"] == "35"
 assert inputs["libhybris_ref"]["default"] == "lindroid-21"
-assert inputs["lunch_target"]["default"] == "aosp_arm64-userdebug"
+assert inputs["lunch_target"]["default"] == "aosp_arm64-trunk_staging-userdebug"
 assert inputs["runner"]["default"] == "ubuntu-24.04"
 
 build = workflow["jobs"]["build"]

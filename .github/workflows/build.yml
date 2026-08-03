@@ -14,7 +14,7 @@ on:
       lunch_target:
         description: Android lunch target
         required: true
-        default: aosp_arm64-userdebug
+        default: aosp_arm64-trunk_staging-userdebug
       runner:
         description: Runner label; use a larger or self-hosted runner when possible
         required: true
