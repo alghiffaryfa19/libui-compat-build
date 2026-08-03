@@ -1,0 +1,32 @@
+# Android 15 / API 35 projects needed by libui_compat_layer and its Soong graph.
+# Paths are repo project paths, not arbitrary directories.
+
+bionic
+build/bazel
+build/blueprint
+build/make
+build/soong
+external/boringssl
+external/fmtlib
+external/libcxx
+external/selinux
+frameworks/native
+hardware/interfaces
+hardware/libhardware
+prebuilts/asuite
+prebuilts/build-tools
+prebuilts/clang/host/linux-x86
+prebuilts/go/linux-x86
+prebuilts/jdk/jdk17/linux-x86
+prebuilts/misc
+prebuilts/rust
+system/core
+system/libbase
+system/libfmq
+system/libhidl
+system/libhwbinder
+system/libvintf
+system/logging
+system/memory/libmeminfo
+system/sepolicy
+system/tools/aidl

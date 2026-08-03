@@ -1,21 +1,41 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 AOSP_MANIFEST_URL="${AOSP_MANIFEST_URL:-https://android.googlesource.com/platform/manifest}"
-AOSP_REF="${AOSP_REF:-android-15.0.0_r3}"
+ANDROID_API="${ANDROID_API:-35}"
+AOSP_REF="${AOSP_REF:-}"
 LIBHYBRIS_REPOSITORY="${LIBHYBRIS_REPOSITORY:-https://github.com/Linux-on-droid/libhybris.git}"
 LIBHYBRIS_REF="${LIBHYBRIS_REF:-lindroid-21}"
 LUNCH_TARGET="${LUNCH_TARGET:-aosp_arm64-userdebug}"
 JOBS="${JOBS:-$(nproc)}"
 AOSP_DIR="${AOSP_DIR:-${RUNNER_TEMP:-$PWD/.work}/aosp}"
 DIST_DIR="${DIST_DIR:-$PWD/dist}"
-MIN_FREE_GIB="${MIN_FREE_GIB:-180}"
+PROJECT_MANIFEST_DIR="${PROJECT_MANIFEST_DIR:-$SCRIPT_DIR/../manifests}"
+MIN_FREE_GIB="${MIN_FREE_GIB:-55}"
 REPO_SYNC_TIMEOUT="${REPO_SYNC_TIMEOUT:-90m}"
 BUILD_TIMEOUT="${BUILD_TIMEOUT:-240m}"
+
+resolve_aosp_ref() {
+    case "$1" in
+        35) printf '%s\n' 'android-15.0.0_r3' ;;
+        *)
+            printf 'unsupported Android API level: %s\n' "$1" >&2
+            printf 'supported API levels: 35\n' >&2
+            return 2
+            ;;
+    esac
+}
+
+if [[ -z "$AOSP_REF" ]]; then
+    AOSP_REF="$(resolve_aosp_ref "$ANDROID_API")"
+fi
+PROJECT_MANIFEST="$PROJECT_MANIFEST_DIR/android-${ANDROID_API}-projects.txt"
 
 print_config() {
     printf '%s\n' \
         "AOSP_MANIFEST_URL=$AOSP_MANIFEST_URL" \
+        "ANDROID_API=$ANDROID_API" \
         "AOSP_REF=$AOSP_REF" \
         "LIBHYBRIS_REPOSITORY=$LIBHYBRIS_REPOSITORY" \
         "LIBHYBRIS_REF=$LIBHYBRIS_REF" \
@@ -23,6 +43,7 @@ print_config() {
         "JOBS=$JOBS" \
         "AOSP_DIR=$AOSP_DIR" \
         "DIST_DIR=$DIST_DIR" \
+        "PROJECT_MANIFEST=$PROJECT_MANIFEST" \
         "MIN_FREE_GIB=$MIN_FREE_GIB" \
         "REPO_SYNC_TIMEOUT=$REPO_SYNC_TIMEOUT" \
         "BUILD_TIMEOUT=$BUILD_TIMEOUT"
@@ -48,6 +69,25 @@ if [[ ! "$MIN_FREE_GIB" =~ ^[1-9][0-9]*$ ]]; then
     exit 2
 fi
 
+if [[ ! -f "$PROJECT_MANIFEST" ]]; then
+    printf 'project manifest not found for Android API %s: %s\n' \
+        "$ANDROID_API" "$PROJECT_MANIFEST" >&2
+    exit 1
+fi
+
+sync_projects=()
+while IFS= read -r project || [[ -n "$project" ]]; do
+    case "$project" in
+        ''|'#'*) continue ;;
+    esac
+    sync_projects+=("$project")
+done < "$PROJECT_MANIFEST"
+
+if (( ${#sync_projects[@]} == 0 )); then
+    printf 'project manifest is empty: %s\n' "$PROJECT_MANIFEST" >&2
+    exit 1
+fi
+
 for command in df file git nm readelf repo sha256sum timeout; do
     if ! command -v "$command" >/dev/null 2>&1; then
         printf 'required command not found: %s\n' "$command" >&2
@@ -60,6 +100,7 @@ exec > >(tee "$DIST_DIR/build.log") 2>&1
 
 printf 'Build configuration:\n'
 print_config
+printf 'Synchronizing %s projects from %s\n' "${#sync_projects[@]}" "$PROJECT_MANIFEST"
 
 available_kib="$(df --output=avail -k "$AOSP_DIR" | {
     read -r
@@ -99,7 +140,8 @@ printf '\n=== repo init ===\n'
             --prune \
             --fail-fast \
             --retry-fetches=3 \
-            --jobs="$JOBS"
+            --jobs="$JOBS" \
+            "${sync_projects[@]}"
 )
 
 libhybris_dir="$AOSP_DIR/libhybris"
@@ -159,7 +201,9 @@ nm -D --defined-only "$output" >"$artifact_dir/symbols.txt"
 
 printf '%s\n' \
     "AOSP_MANIFEST_URL=$AOSP_MANIFEST_URL" \
+    "ANDROID_API=$ANDROID_API" \
     "AOSP_REF=$AOSP_REF" \
+    "PROJECT_MANIFEST=$PROJECT_MANIFEST" \
     "LIBHYBRIS_REPOSITORY=$LIBHYBRIS_REPOSITORY" \
     "LIBHYBRIS_REF=$LIBHYBRIS_REF" \
     "LIBHYBRIS_COMMIT=$libhybris_commit" \

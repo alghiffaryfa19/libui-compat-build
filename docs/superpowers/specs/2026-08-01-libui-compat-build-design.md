@@ -17,7 +17,8 @@ API and does not provide a stable cross-release C++ ABI.
 The repository will contain:
 
 - A manually triggered GitHub Actions workflow.
-- A build script that checks out Android 15 AOSP and libhybris, then builds only
+- A build script that initializes Android 15 AOSP, synchronizes only the
+  dependency projects in `manifests/android-35-projects.txt`, and builds only
   `libui_compat_layer`.
 - Artifact validation and provenance collection.
 - Documentation for runner requirements, inputs, outputs, and target-side
@@ -32,7 +33,7 @@ kernel or vendor source at build time.
 The workflow exposes manual inputs with these defaults:
 
 - AOSP manifest: `https://android.googlesource.com/platform/manifest`
-- AOSP ref: `android-15.0.0_r3`
+- Android API: `35`, mapped to AOSP ref `android-15.0.0_r3`
 - Lunch target: `aosp_arm64-userdebug`
 - libhybris repository: `https://github.com/Linux-on-droid/libhybris.git`
 - libhybris ref: `lindroid-21`
@@ -42,21 +43,22 @@ The resolved AOSP and libhybris commit IDs are recorded in the artifact.
 
 ## Runner Requirements
 
-A full AOSP platform checkout is intentionally used because the module relies
-on private `frameworks/native` headers and Android platform libraries that are
-not available in the NDK.
+A complete platform checkout is not required. The module relies on private
+`frameworks/native` headers and Android platform libraries, so the workflow
+uses a versioned project allowlist containing the build system, native graphics
+stack, graphics interfaces, core libraries, and host toolchains.
 
 The recommended runner has at least:
 
-- 200 GiB free disk space
-- 32 GiB RAM
+- 55 GiB free disk space
+- 16 GiB RAM
 - 4 CPU cores
 - A six-hour or longer job timeout
 
 The workflow accepts a runner label so a GitHub larger runner or self-hosted
-runner can be selected. A standard GitHub-hosted runner is not reliable for
-this build because it generally lacks the required disk capacity. The script
-fails before synchronization when fewer than 180 GiB are available.
+runner can be selected. The script fails before synchronization when fewer than
+55 GiB are available. Unsupported API levels fail rather than silently using a
+different Android platform's headers.
 
 Repository synchronization and compilation also have independent timeouts so
 an unavailable network or stalled build fails with a diagnostic phase marker
@@ -67,8 +69,9 @@ instead of consuming the full workflow timeout.
 1. Check out this orchestration repository.
 2. Reclaim known large preinstalled SDK/tool directories and report capacity.
 3. Install the `repo` launcher and required host packages.
-4. Initialize AOSP with partial-clone support and the selected Android 15 ref.
-5. Synchronize the current AOSP branch without tags or clone bundles.
+4. Resolve the Android API level to an AOSP ref and its project allowlist.
+5. Initialize AOSP with partial-clone support and synchronize only that
+   allowlist, without tags or clone bundles.
 6. Clone libhybris at the selected ref into the AOSP source root.
 7. Run `source build/envsetup.sh` and lunch the selected arm64 target.
 8. Build only `libui_compat_layer` with the Android build shell.

@@ -5,26 +5,31 @@ GitHub Actions wrapper for building the Android 15 arm64
 [Linux-on-droid/libhybris](https://github.com/Linux-on-droid/libhybris).
 
 The module uses private Android platform headers, so an NDK-only build is not
-enough. The workflow downloads an Android 15 AOSP tree and runs the platform
-build for this module only. It does not need an MT6989 kernel or device tree.
+enough. The workflow initializes AOSP but synchronizes only the Android 15
+projects listed in `manifests/android-35-projects.txt`; it does not download
+the unrelated AOSP projects. It does not need an MT6989 kernel or device tree.
 
 ## Run
 
 1. Push this repository to GitHub.
 2. Open **Actions > Build libui compatibility layer > Run workflow**.
-3. Select the Android ref, libhybris ref, lunch target, and runner label.
+3. Select the Android SDK/API level, libhybris ref, lunch target, and runner
+   label.
 4. Download the `libui-compat-<run-id>` artifact when the job completes.
 
 Defaults:
 
-- AOSP: `android-15.0.0_r3`
+- Android API: `35` -> AOSP `android-15.0.0_r3`
 - libhybris: `Linux-on-droid/libhybris`, branch `lindroid-21`
 - target: `aosp_arm64-userdebug`
 
-Use a larger or self-hosted runner with roughly 200 GiB of free disk and at
-least 32 GiB RAM. A standard GitHub-hosted runner is likely to run out of disk
-while synchronizing AOSP. The script checks for 180 GiB before starting the
-checkout and stops with a clear error when the runner is too small.
+The minimal project set is intended to fit on a standard runner, but use at
+least 55 GiB of free disk and 16 GiB RAM. A larger or self-hosted runner is
+preferred. The script checks free space before synchronization and stops with a
+clear error when the runner is too small.
+
+Only API 35 is currently mapped. An unsupported API fails instead of silently
+using headers from a different Android release.
 
 The workflow also limits AOSP synchronization to 90 minutes and compilation to
 240 minutes. Override `MIN_FREE_GIB`, `REPO_SYNC_TIMEOUT`, or

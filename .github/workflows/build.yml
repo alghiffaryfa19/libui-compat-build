@@ -3,10 +3,10 @@ name: Build libui compatibility layer
 on:
   workflow_dispatch:
     inputs:
-      aosp_ref:
-        description: Android platform manifest ref
+      android_api:
+        description: Android SDK/API level used to select the minimal manifest
         required: true
-        default: android-15.0.0_r3
+        default: '35'
       libhybris_ref:
         description: Linux-on-droid/libhybris branch, tag, or commit
         required: true
@@ -24,7 +24,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: libui-compat-${{ inputs.aosp_ref }}-${{ inputs.libhybris_ref }}
+  group: libui-compat-api-${{ inputs.android_api }}-${{ inputs.libhybris_ref }}
   cancel-in-progress: false
 
 jobs:
@@ -32,11 +32,11 @@ jobs:
     runs-on: ${{ inputs.runner }}
     timeout-minutes: 360
     env:
-      AOSP_REF: ${{ inputs.aosp_ref }}
+      ANDROID_API: ${{ inputs.android_api }}
       LIBHYBRIS_REF: ${{ inputs.libhybris_ref }}
       LUNCH_TARGET: ${{ inputs.lunch_target }}
       DIST_DIR: ${{ github.workspace }}/dist
-      MIN_FREE_GIB: 180
+      MIN_FREE_GIB: 55
       REPO_SYNC_TIMEOUT: 90m
       BUILD_TIMEOUT: 240m
 
@@ -70,8 +70,8 @@ jobs:
 
       - name: Build libui_compat_layer.so
         run: |
-          printf 'MIN_FREE_GIB=%s REPO_SYNC_TIMEOUT=%s BUILD_TIMEOUT=%s\n' \
-            "$MIN_FREE_GIB" "$REPO_SYNC_TIMEOUT" "$BUILD_TIMEOUT"
+          printf 'ANDROID_API=%s MIN_FREE_GIB=%s REPO_SYNC_TIMEOUT=%s BUILD_TIMEOUT=%s\n' \
+            "$ANDROID_API" "$MIN_FREE_GIB" "$REPO_SYNC_TIMEOUT" "$BUILD_TIMEOUT"
           scripts/build.sh
 
       - name: Upload build output
