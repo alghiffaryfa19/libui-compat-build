@@ -36,14 +36,29 @@ clone_branch() {
     for attempt in 1 2 3; do
         rm -rf "$destination"
         if git clone --depth=1 --single-branch --branch "$branch" \
-            --filter=blob:none "$repository" "$destination"; then
+            --filter=blob:none -c http.version=HTTP/1.1 \
+            "$repository" "$destination"; then
             return 0
         fi
         printf 'WARN: clone failed (attempt %s/3): %s %s\n' \
             "$attempt" "$repository" "$branch" >&2
         rm -rf "$destination"
     done
-    die "unable to clone $repository at branch $branch after 3 attempts"
+
+    # GitHub's codeload endpoint avoids smart-HTTP negotiation failures on
+    # hosted runners while preserving the exact branch contents.
+    local archive_url="${repository%.git}/archive/refs/heads/${branch}.tar.gz"
+    local archive_file
+    archive_file="$(mktemp)"
+    printf 'INFO: falling back to source archive: %s\n' "$archive_url"
+    if curl -fL --retry 3 --retry-all-errors "$archive_url" -o "$archive_file"; then
+        mkdir -p "$destination"
+        tar -xzf "$archive_file" --strip-components=1 -C "$destination"
+        rm -f "$archive_file"
+        return 0
+    fi
+    rm -f "$archive_file"
+    die "unable to fetch $repository at branch $branch"
 }
 
 usage() {
@@ -73,7 +88,7 @@ if ! command -v repo >/dev/null 2>&1 && [[ -x "$HOME/bin/repo" ]]; then
     export PATH="$HOME/bin:$PATH"
 fi
 
-for command in git repo file readelf nm sha256sum timeout; do
+for command in curl git repo file readelf nm sha256sum tar timeout; do
     command -v "$command" >/dev/null 2>&1 || die "missing command: $command"
 done
 repo --version >/dev/null 2>&1 || die "repo launcher is invalid; reinstall from storage.googleapis.com/git-repo-downloads/repo"
