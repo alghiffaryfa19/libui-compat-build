@@ -27,6 +27,25 @@ BUILD_TIMEOUT="${BUILD_TIMEOUT:-240m}"
 log() { printf '\n== %s ==\n' "$*"; }
 die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 
+clone_branch() {
+    local repository="$1"
+    local branch="$2"
+    local destination="$3"
+    local attempt
+
+    for attempt in 1 2 3; do
+        rm -rf "$destination"
+        if git clone --depth=1 --single-branch --branch "$branch" \
+            --filter=blob:none "$repository" "$destination"; then
+            return 0
+        fi
+        printf 'WARN: clone failed (attempt %s/3): %s %s\n' \
+            "$attempt" "$repository" "$branch" >&2
+        rm -rf "$destination"
+    done
+    die "unable to clone $repository at branch $branch after 3 attempts"
+}
+
 usage() {
     cat <<'EOF'
 Usage: build-android16-lindroid.sh [--prepare|--build|--package]
@@ -102,18 +121,18 @@ prepare_checkout() {
 
     log "libhybris checkout"
     if [[ -d "$LIBHYBRIS_DIR/.git" ]]; then
-        git -C "$LIBHYBRIS_DIR" fetch --depth=1 origin "$LIBHYBRIS_REF"
+        git -C "$LIBHYBRIS_DIR" fetch --depth=1 --filter=blob:none origin "$LIBHYBRIS_REF"
         git -C "$LIBHYBRIS_DIR" checkout --detach FETCH_HEAD
     else
-        git clone --depth=1 --branch "$LIBHYBRIS_REF" "$LIBHYBRIS_REPOSITORY" "$LIBHYBRIS_DIR"
+        clone_branch "$LIBHYBRIS_REPOSITORY" "$LIBHYBRIS_REF" "$LIBHYBRIS_DIR"
     fi
 
     log "vendor_lindroid checkout"
     if [[ -d "$VENDOR_DIR/.git" ]]; then
-        git -C "$VENDOR_DIR" fetch --depth=1 origin "$VENDOR_REF" || true
-        git -C "$VENDOR_DIR" checkout --detach FETCH_HEAD 2>/dev/null || true
+        git -C "$VENDOR_DIR" fetch --depth=1 --filter=blob:none origin "$VENDOR_REF"
+        git -C "$VENDOR_DIR" checkout --detach FETCH_HEAD
     else
-        git clone --depth=1 --branch "$VENDOR_REF" "$VENDOR_REPOSITORY" "$VENDOR_DIR"
+        clone_branch "$VENDOR_REPOSITORY" "$VENDOR_REF" "$VENDOR_DIR"
     fi
 
     [[ -d "$LIBHYBRIS_DIR" ]] || die "libhybris checkout missing"
