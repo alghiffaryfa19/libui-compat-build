@@ -66,6 +66,15 @@ jobs:
             lz4 lzop pngcrush python3-yaml repo rsync squashfs-tools \
             xsltproc zip zlib1g-dev
 
+      - name: Install writable repo launcher
+        run: |
+          mkdir -p "$HOME/bin"
+          curl -fsSL https://storage.googleapis.com/git-repo-downloads/repo \
+            -o "$HOME/bin/repo"
+          chmod +x "$HOME/bin/repo"
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+          "$HOME/bin/repo" --version
+
       - name: Validate Android 16 build inputs
         run: |
           bash -n scripts/build-android16-lindroid.sh
