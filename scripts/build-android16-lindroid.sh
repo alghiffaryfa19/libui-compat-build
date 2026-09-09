@@ -111,6 +111,15 @@ printf '%s\n' \
     "JOBS=$JOBS"
 
 prepare_checkout() {
+
+    log "vendor_lindroid checkout"
+    if [[ -d "$VENDOR_DIR/.git" ]]; then
+        git -C "$VENDOR_DIR" fetch --depth=1 --filter=blob:none origin "$VENDOR_REF"
+        git -C "$VENDOR_DIR" checkout --detach FETCH_HEAD
+    else
+        clone_branch "$VENDOR_REPOSITORY" "$VENDOR_REF" "$VENDOR_DIR"
+    fi
+    
     log "AOSP checkout"
     if [[ ! -d "$AOSP_DIR/.repo" ]]; then
         (
@@ -142,13 +151,7 @@ prepare_checkout() {
         clone_branch "$LIBHYBRIS_REPOSITORY" "$LIBHYBRIS_REF" "$LIBHYBRIS_DIR"
     fi
 
-    log "vendor_lindroid checkout"
-    if [[ -d "$VENDOR_DIR/.git" ]]; then
-        git -C "$VENDOR_DIR" fetch --depth=1 --filter=blob:none origin "$VENDOR_REF"
-        git -C "$VENDOR_DIR" checkout --detach FETCH_HEAD
-    else
-        clone_branch "$VENDOR_REPOSITORY" "$VENDOR_REF" "$VENDOR_DIR"
-    fi
+    
 
     [[ -d "$LIBHYBRIS_DIR" ]] || die "libhybris checkout missing"
     [[ -d "$VENDOR_DIR" ]] || die "vendor_lindroid checkout missing"
