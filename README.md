@@ -31,10 +31,28 @@ clear error when the runner is too small.
 Only API 35 is currently mapped. An unsupported API fails instead of silently
 using headers from a different Android release.
 
+For an Android 16 device, do not deploy the default API 35 artifact. Use the
+Android 16 workflow and script added in this repository. The compatibility
+layer is a private Android ABI boundary and must be built against the device
+release.
+
 The workflow also limits AOSP synchronization to 90 minutes and compilation to
 240 minutes. Override `MIN_FREE_GIB`, `REPO_SYNC_TIMEOUT`, or
 `BUILD_TIMEOUT` in a self-hosted workflow copy when the runner has different
 capacity or performance characteristics.
+
+## Local Android 16 build
+
+From the repository root:
+
+```sh
+scripts/build-android16-lindroid.sh --prepare
+scripts/build-android16-lindroid.sh
+```
+
+The local script uses AOSP `android-16.0.0_r4`, libhybris `lindroid-drm`, and
+`vendor_lindroid` `lindroid-22.1`. Outputs are written to
+`dist/android16-lindroid/artifact`. It never flashes or installs to a device.
 
 The artifact contains the library, its checksum, ELF diagnostics, build log,
 resolved AOSP manifest, and libhybris commit metadata.

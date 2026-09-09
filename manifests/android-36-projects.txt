@@ -1,0 +1,30 @@
+# Minimal Android 16 / API 36 projects for Lindroid compatibility libraries.
+# Paths are repo project paths, not arbitrary directories.
+bionic
+build/blueprint
+build/make
+build/soong
+external/boringssl
+external/fmtlib
+external/libcxx
+external/selinux
+frameworks/native
+hardware/interfaces
+hardware/libhardware
+prebuilts/asuite
+prebuilts/build-tools
+prebuilts/clang/host/linux-x86
+prebuilts/go/linux-x86
+prebuilts/jdk/jdk21
+prebuilts/misc
+prebuilts/rust
+system/core
+system/libbase
+system/libfmq
+system/libhidl
+system/libhwbinder
+system/libvintf
+system/logging
+system/memory/libmeminfo
+system/sepolicy
+system/tools/aidl

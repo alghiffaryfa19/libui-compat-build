@@ -7,6 +7,9 @@ root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 [[ -f "$root_dir/.github/workflows/build.yml" ]]
 [[ -f "$root_dir/README.md" ]]
 [[ -f "$root_dir/manifests/android-35-projects.txt" ]]
+[[ -f "$root_dir/manifests/android-36-projects.txt" ]]
+[[ -x "$root_dir/scripts/build-android16-lindroid.sh" ]]
+[[ -f "$root_dir/.github/workflows/build-android16.yml" ]]
 
 bash -n "$root_dir/scripts/build.sh"
 
@@ -71,6 +74,11 @@ assert "timeout --foreground" in script
 assert "android-${ANDROID_API}-projects.txt" in script
 assert '"${sync_projects[@]}"' in script
 PY
+
+bash -n "$root_dir/scripts/build-android16-lindroid.sh"
+grep -q 'android-16.0.0_r4' "$root_dir/scripts/build-android16-lindroid.sh"
+grep -q 'lindroid-drm' "$root_dir/scripts/build-android16-lindroid.sh"
+grep -q 'lindroid-22.1' "$root_dir/scripts/build-android16-lindroid.sh"
 
 python3 - "$root_dir/manifests/android-35-projects.txt" <<'PY'
 import sys

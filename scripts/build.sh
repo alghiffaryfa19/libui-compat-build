@@ -21,7 +21,7 @@ resolve_aosp_ref() {
         35) printf '%s\n' 'android-15.0.0_r3' ;;
         *)
             printf 'unsupported Android API level: %s\n' "$1" >&2
-            printf 'supported API levels: 35\n' >&2
+            printf 'supported API levels: 35 (Android 15); Android 16/API 36 requires a matching AOSP ref and project manifest\n' >&2
             return 2
             ;;
     esac

@@ -1,0 +1,93 @@
+name: Build Lindroid Android 16 native libraries
+
+on:
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: GitHub-hosted or self-hosted runner with at least 55 GiB free disk and 16 GiB RAM
+        required: true
+        default: ubuntu-24.04
+      jobs:
+        description: Parallel AOSP build jobs
+        required: true
+        default: '4'
+      repo_sync_timeout:
+        description: AOSP repo sync timeout
+        required: true
+        default: 90m
+      build_timeout:
+        description: AOSP build timeout
+        required: true
+        default: 240m
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lindroid-android16-${{ inputs.runner }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ${{ inputs.runner }}
+    timeout-minutes: 360
+    env:
+      AOSP_REF: android-16.0.0_r4
+      LIBHYBRIS_REF: lindroid-drm
+      VENDOR_REF: lindroid-22.1
+      LUNCH_TARGET: aosp_arm64-trunk_staging-userdebug
+      JOBS: ${{ inputs.jobs }}
+      REPO_SYNC_TIMEOUT: ${{ inputs.repo_sync_timeout }}
+      BUILD_TIMEOUT: ${{ inputs.build_timeout }}
+      DIST_DIR: ${{ github.workspace }}/dist/android16-lindroid
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Reclaim disk and report capacity
+        run: |
+          df -h
+          sudo rm -rf \
+            /opt/az \
+            /opt/ghc \
+            /opt/hostedtoolcache/CodeQL \
+            /usr/local/lib/android \
+            /usr/local/share/chromium \
+            /usr/local/share/powershell \
+            /usr/share/dotnet
+          df -h
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            bc bison build-essential ccache flex g++-multilib gcc-multilib \
+            git git-lfs libelf-dev liblz4-tool libssl-dev libxml2-utils \
+            lz4 lzop pngcrush python3-yaml repo rsync squashfs-tools \
+            xsltproc zip zlib1g-dev
+
+      - name: Validate Android 16 build inputs
+        run: |
+          bash -n scripts/build-android16-lindroid.sh
+          test -f manifests/android-36-projects.txt
+          test "$AOSP_REF" = android-16.0.0_r4
+          test "$LIBHYBRIS_REF" = lindroid-drm
+          test "$VENDOR_REF" = lindroid-22.1
+
+      - name: Prepare Android 16 source tree
+        run: scripts/build-android16-lindroid.sh --prepare
+
+      - name: Build Android 16 native libraries
+        run: scripts/build-android16-lindroid.sh --build
+
+      - name: Package Android 16 artifacts
+        run: scripts/build-android16-lindroid.sh --package
+
+      - name: Upload Android 16 artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lindroid-android16-${{ github.run_id }}
+          path: dist/android16-lindroid/
+          if-no-files-found: warn
+          retention-days: 14
