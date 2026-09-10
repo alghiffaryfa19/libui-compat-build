@@ -6,8 +6,12 @@ build/make
 build/soong
 external/boringssl
 external/fmtlib
+external/golang-protobuf
+external/icu
 external/libcxx
 external/selinux
+frameworks/base
+frameworks/av
 frameworks/native
 hardware/interfaces
 hardware/libhardware
@@ -19,6 +23,7 @@ prebuilts/jdk/jdk21
 prebuilts/misc
 prebuilts/rust
 system/core
+libnativehelper
 system/libbase
 system/libfmq
 system/libhidl

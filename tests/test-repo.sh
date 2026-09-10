@@ -111,3 +111,40 @@ required = {
 }
 assert required <= projects, sorted(required - projects)
 PY
+
+python3 - "$root_dir/manifests/android-36-projects.txt" <<'PY'
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as stream:
+    projects = {
+        line.strip()
+        for line in stream
+        if line.strip() and not line.lstrip().startswith("#")
+    }
+
+required = {
+    "bionic",
+    "build/make",
+    "build/soong",
+    "external/golang-protobuf",
+    "external/icu",
+    "frameworks/av",
+    "frameworks/native",
+    "frameworks/base",
+    "hardware/interfaces",
+    "hardware/libhardware",
+    "prebuilts/clang/host/linux-x86",
+    "prebuilts/build-tools",
+    "prebuilts/jdk/jdk21",
+    "libnativehelper",
+    "system/core",
+    "system/libbase",
+    "system/libhidl",
+    "system/libfmq",
+    "system/libhwbinder",
+    "system/libvintf",
+    "system/logging",
+    "system/tools/aidl",
+}
+assert required <= projects, sorted(required - projects)
+PY
