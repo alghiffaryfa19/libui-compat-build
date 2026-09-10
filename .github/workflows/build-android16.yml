@@ -1,8 +1,6 @@
 name: Build Lindroid Android 16 native libraries
 
 on:
-  push:
-    branches: [ "main", "master" ]
   workflow_dispatch:
     inputs:
       runner:

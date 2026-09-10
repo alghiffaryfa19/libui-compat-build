@@ -148,13 +148,18 @@ prepare_checkout() {
     if [[ ! -d "$AOSP_DIR/.repo" ]]; then
         (
             cd "$AOSP_DIR"
+            # repo init \
+            #     --manifest-url=https://android.googlesource.com/platform/manifest \
+            #     --manifest-branch="$AOSP_REF" \
+            #     --depth=1 \
+            #     --partial-clone \
+            #     --clone-filter=blob:limit=10M \
+            #     --no-use-superproject
             repo init \
-                --manifest-url=https://android.googlesource.com/platform/manifest \
-                --manifest-branch="$AOSP_REF" \
-                --depth=1 \
-                --partial-clone \
-                --clone-filter=blob:limit=10M \
-                --no-use-superproject
+                  --manifest-url=https://android.googlesource.com/platform/manifest \
+                  --manifest-branch="$AOSP_REF" \
+                  --depth=1 \
+                  --no-use-superproject
         )
     fi
     local projects=()
@@ -164,8 +169,7 @@ prepare_checkout() {
     done < "$PROJECT_MANIFEST"
     ((${#projects[@]} > 0)) || die "none of the requested projects exist in the AOSP manifest"
     if ! (cd "$AOSP_DIR" && timeout --foreground --signal=TERM --kill-after=60s "$REPO_SYNC_TIMEOUT" \
-        repo sync --current-branch --detach --force-sync --no-clone-bundle --no-tags \
-        --optimized-fetch --prune --fail-fast --retry-fetches=3 --jobs="$SYNC_JOBS" "${projects[@]}"); then
+        repo sync --current-branch --detach --force-sync --no-clone-bundle --no-tags --optimized-fetch --prune --fail-fast --retry-fetches=3 --jobs="$SYNC_JOBS" "${projects[@]}"); then
         die "repo sync failed; inspect $DIST_DIR/build.log for the first project error"
     fi
 
