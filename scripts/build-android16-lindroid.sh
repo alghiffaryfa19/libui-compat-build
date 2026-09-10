@@ -119,6 +119,14 @@ prepare_checkout() {
     else
         clone_branch "$VENDOR_REPOSITORY" "$VENDOR_REF" "$VENDOR_DIR"
     fi
+
+    log "libhybris checkout"
+    if [[ -d "$LIBHYBRIS_DIR/.git" ]]; then
+        git -C "$LIBHYBRIS_DIR" fetch --depth=1 --filter=blob:none origin "$LIBHYBRIS_REF"
+        git -C "$LIBHYBRIS_DIR" checkout --detach FETCH_HEAD
+    else
+        clone_branch "$LIBHYBRIS_REPOSITORY" "$LIBHYBRIS_REF" "$LIBHYBRIS_DIR"
+    fi
     
     log "AOSP checkout"
     if [[ ! -d "$AOSP_DIR/.repo" ]]; then
@@ -142,16 +150,6 @@ prepare_checkout() {
     (cd "$AOSP_DIR" && timeout --foreground --signal=TERM --kill-after=60s "$REPO_SYNC_TIMEOUT" \
         repo sync --current-branch --detach --force-sync --no-clone-bundle --no-tags \
         --optimized-fetch --prune --fail-fast --retry-fetches=3 --jobs="$JOBS" "${projects[@]}")
-
-    log "libhybris checkout"
-    if [[ -d "$LIBHYBRIS_DIR/.git" ]]; then
-        git -C "$LIBHYBRIS_DIR" fetch --depth=1 --filter=blob:none origin "$LIBHYBRIS_REF"
-        git -C "$LIBHYBRIS_DIR" checkout --detach FETCH_HEAD
-    else
-        clone_branch "$LIBHYBRIS_REPOSITORY" "$LIBHYBRIS_REF" "$LIBHYBRIS_DIR"
-    fi
-
-    
 
     [[ -d "$LIBHYBRIS_DIR" ]] || die "libhybris checkout missing"
     [[ -d "$VENDOR_DIR" ]] || die "vendor_lindroid checkout missing"
