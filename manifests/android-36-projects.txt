@@ -33,3 +33,4 @@ system/logging
 system/memory/libmeminfo
 system/sepolicy
 system/tools/aidl
+external/pogreb
