@@ -10,6 +10,7 @@ REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 AOSP_DIR="${AOSP_DIR:-$REPO_ROOT/.work/aosp-android16}"
 DIST_DIR="${DIST_DIR:-$REPO_ROOT/dist/android16-lindroid}"
 JOBS="${JOBS:-$(nproc)}"
+SYNC_JOBS="${SYNC_JOBS:-1}"
 AOSP_REF="${AOSP_REF:-android-16.0.0_r4}"
 LUNCH_TARGET="${LUNCH_TARGET:-aosp_arm64-trunk_staging-userdebug}"
 LIBHYBRIS_REPOSITORY="${LIBHYBRIS_REPOSITORY:-https://github.com/Linux-on-droid/libhybris.git}"
@@ -106,6 +107,7 @@ for command in curl git repo file readelf nm sha256sum tar timeout; do
 done
 repo --version >/dev/null 2>&1 || die "repo launcher is invalid; reinstall from storage.googleapis.com/git-repo-downloads/repo"
 [[ "$JOBS" =~ ^[1-9][0-9]*$ ]] || die "JOBS must be a positive integer"
+[[ "$SYNC_JOBS" =~ ^[1-9][0-9]*$ ]] || die "SYNC_JOBS must be a positive integer"
 [[ -f "$PROJECT_MANIFEST" ]] || die "missing Android 16 project manifest: $PROJECT_MANIFEST"
 
 mkdir -p "$AOSP_DIR" "$DIST_DIR"
@@ -121,7 +123,8 @@ printf '%s\n' \
     "VENDOR_DIR=$VENDOR_DIR" \
     "LIBHYBRIS_DIR=$LIBHYBRIS_DIR" \
     "PROJECT_MANIFEST=$PROJECT_MANIFEST" \
-    "JOBS=$JOBS"
+    "JOBS=$JOBS" \
+    "SYNC_JOBS=$SYNC_JOBS"
 
 prepare_checkout() {
 
@@ -162,7 +165,7 @@ prepare_checkout() {
     ((${#projects[@]} > 0)) || die "none of the requested projects exist in the AOSP manifest"
     if ! (cd "$AOSP_DIR" && timeout --foreground --signal=TERM --kill-after=60s "$REPO_SYNC_TIMEOUT" \
         repo sync --current-branch --detach --force-sync --no-clone-bundle --no-tags \
-        --optimized-fetch --prune --fail-fast --retry-fetches=3 --jobs="$JOBS" "${projects[@]}"); then
+        --optimized-fetch --prune --fail-fast --retry-fetches=3 --jobs="$SYNC_JOBS" "${projects[@]}"); then
         die "repo sync failed; inspect $DIST_DIR/build.log for the first project error"
     fi
 
