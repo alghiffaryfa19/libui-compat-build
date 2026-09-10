@@ -227,6 +227,12 @@ package_artifacts() {
     printf 'Artifacts: %s\n' "$artifact_dir"
 }
 
-[[ "$mode" == prepare || "$mode" == all ]] && prepare_checkout
-[[ "$mode" == build || "$mode" == all ]] && build_targets
-[[ "$mode" == package || "$mode" == all ]] && package_artifacts
+if [[ "$mode" == prepare || "$mode" == all ]]; then
+    prepare_checkout
+fi
+if [[ "$mode" == build || "$mode" == all ]]; then
+    build_targets
+fi
+if [[ "$mode" == package || "$mode" == all ]]; then
+    package_artifacts
+fi
