@@ -27,6 +27,19 @@ BUILD_TIMEOUT="${BUILD_TIMEOUT:-240m}"
 log() { printf '\n== %s ==\n' "$*"; }
 die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 
+link_checkout() {
+    local source="$1"
+    local destination="$2"
+
+    if [[ -L "$destination" ]]; then
+        [[ "$(readlink -- "$destination")" == "$source" ]] || \
+            die "$destination already exists with a different target"
+        return 0
+    fi
+    [[ ! -e "$destination" ]] || die "$destination already exists; remove it or set the checkout paths explicitly"
+    ln -s "$source" "$destination"
+}
+
 clone_branch() {
     local repository="$1"
     local branch="$2"
@@ -147,20 +160,20 @@ prepare_checkout() {
         projects+=("$project")
     done < "$PROJECT_MANIFEST"
     ((${#projects[@]} > 0)) || die "none of the requested projects exist in the AOSP manifest"
-    (cd "$AOSP_DIR" && timeout --foreground --signal=TERM --kill-after=60s "$REPO_SYNC_TIMEOUT" \
+    if ! (cd "$AOSP_DIR" && timeout --foreground --signal=TERM --kill-after=60s "$REPO_SYNC_TIMEOUT" \
         repo sync --current-branch --detach --force-sync --no-clone-bundle --no-tags \
-        --optimized-fetch --prune --fail-fast --retry-fetches=3 --jobs="$JOBS" "${projects[@]}")
+        --optimized-fetch --prune --fail-fast --retry-fetches=3 --jobs="$JOBS" "${projects[@]}"); then
+        die "repo sync failed; inspect $DIST_DIR/build.log for the first project error"
+    fi
 
     [[ -d "$LIBHYBRIS_DIR" ]] || die "libhybris checkout missing"
     [[ -d "$VENDOR_DIR" ]] || die "vendor_lindroid checkout missing"
 
-    # These paths are the expected AOSP integration points. Do not overwrite
-    # an existing checkout; a mismatch must be fixed explicitly by the user.
-    [[ ! -e "$AOSP_DIR/vendor/lindroid" ]] || die "$AOSP_DIR/vendor/lindroid already exists; remove it or set VENDOR_DIR/AOSP_DIR explicitly"
-    [[ ! -e "$AOSP_DIR/external/libhybris" ]] || die "$AOSP_DIR/external/libhybris already exists; remove it or set LIBHYBRIS_DIR/AOSP_DIR explicitly"
+    # These paths are the expected AOSP integration points. Reuse only the
+    # exact symlinks created by this script; never overwrite another path.
     mkdir -p "$AOSP_DIR/vendor" "$AOSP_DIR/external"
-    ln -s "$VENDOR_DIR" "$AOSP_DIR/vendor/lindroid"
-    ln -s "$LIBHYBRIS_DIR" "$AOSP_DIR/external/libhybris"
+    link_checkout "$VENDOR_DIR" "$AOSP_DIR/vendor/lindroid"
+    link_checkout "$LIBHYBRIS_DIR" "$AOSP_DIR/external/libhybris"
 }
 
 build_targets() {
